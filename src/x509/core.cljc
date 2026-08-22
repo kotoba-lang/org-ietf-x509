@@ -200,6 +200,33 @@
   (when-let [ext (extension certificate :authority-key-identifier)]
     (some-> (asn1/find-context (asn1/decode (:der ext)) 0) :asn1/content)))
 
+(defn dns-names
+  "`subjectAltName` `dNSName` entries, lowercased, in the order they appear —
+  or nil when there is no `subjectAltName` extension.
+
+  nil and `[]` are different answers and both happen: absent means the
+  certificate names no host, and empty means it has a `subjectAltName` that
+  names hosts nowhere in it (an `otherName`-only certificate, which JPKI's
+  are). A caller matching a hostname must refuse both, and refuse them by
+  different names, so `nil` is not collapsed into `[]` here.
+
+  Lowercased because DNS labels are case-insensitive (RFC 4343) and a caller
+  that compares them without knowing that gets the answer wrong for exactly the
+  certificates that spell a name in mixed case. The ORDER is kept: it is the
+  issuer's, and an audit that reports \"which name did this match\" wants it.
+
+  **The matching is not here.** Wildcard rules — one label, leftmost only, no
+  partial labels — are RFC 6125, which is a question about a protocol using a
+  certificate rather than about the certificate. `kotoba-lang/org-ietf-tls`
+  asks it. This answers only what the certificate says."
+  [certificate]
+  (when-let [ext (extension certificate :subject-alt-name)]
+    (->> (:asn1/elements (asn1/decode (:der ext)))
+         (filter #(asn1/context-tag? % 2))
+         ;; [2] IMPLICIT IA5String: the content octets are the name, and each
+         ;; is one octet per character by definition of IA5.
+         (mapv #(str/lower-case (str/join (map char (asn1/->ints (:asn1/content %)))))))))
+
 (defn other-names
   "`subjectAltName` `otherName` entries as `{oid → [inner-elements]}`.
 

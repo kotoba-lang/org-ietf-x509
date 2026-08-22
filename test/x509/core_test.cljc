@@ -172,3 +172,34 @@
        (is (not (:verified (x509/verify-signature
                             tsa root (fn [_] (throw (ex-info "provider missing" {})))))))))
    )
+
+;; A third certificate, for the names a TLS client lives on. OpenSSL produced
+;; it 2026-08-22; it expires 2046 and nothing here asserts its validity period.
+;;
+;; openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1
+;;   -subj "/C=JP/O=Kotoba Test/CN=Kotoba Test SAN"
+;;   -addext "basicConstraints=critical,CA:FALSE"
+;;   -addext "subjectAltName=DNS:example.test.invalid,DNS:*.example.test.invalid,
+;;            email:ops@example.test.invalid,IP:203.0.113.9"
+(def san-der (asn1/unhex "30820227308201cda00302010202142ca17f5167e402c91b88ec5e0a8793017386ac84300a06082a8648ce3d040302303d310b3009060355040613024a5031143012060355040a0c0b4b6f746f626120546573743118301606035504030c0f4b6f746f626120546573742053414e301e170d3236303832323032313233345a170d3436303831373032313233345a303d310b3009060355040613024a5031143012060355040a0c0b4b6f746f626120546573743118301606035504030c0f4b6f746f626120546573742053414e3059301306072a8648ce3d020106082a8648ce3d030107034200042a34f66c4c6c7b9db1d759b8aac83cc944863ddd3e08d85286c2acb9479d5a4f6668567dbf203106ba59271b1b60a9838db716a6395397f4d23a6ae4181c0110a381aa3081a7301d0603551d0e041604144463bbdf2ed4089999dc10887a9e76d19dff85c5301f0603551d230418301680144463bbdf2ed4089999dc10887a9e76d19dff85c5300c0603551d130101ff0402300030570603551d110450304e82146578616d706c652e746573742e696e76616c696482162a2e6578616d706c652e746573742e696e76616c696481186f7073406578616d706c652e746573742e696e76616c69648704cb007109300a06082a8648ce3d0403020348003045022100d4a45457af1482d1ec03770c50df5cb34b21897ba89f1da7ac6dbc15907b200a022002dd19f59b8e3777755bea1845f3329a5dfb21ec11f85d9acae7e1c34aaa159a"))
+(def san-cert (x509/parse san-der))
+
+(deftest reads-dns-names-and-only-dns-names
+  (testing "the two dNSName entries, in the issuer's order, lowercased"
+    (is (= ["example.test.invalid" "*.example.test.invalid"] (x509/dns-names san-cert)))
+    (is (nil? (x509/dns-names root))
+        "absent subjectAltName is nil, not empty -- a caller must be able to tell
+         \"this certificate names no host\" from \"it named none of type dNSName\""))
+
+  (testing "rfc822Name and iPAddress are in the same SEQUENCE and are not dNSNames"
+    ;; The certificate carries four GeneralNames and this returns two. A filter
+    ;; on the SEQUENCE rather than on the tag would return an email address as a
+    ;; hostname, and an email address is a string a hostname matcher will
+    ;; happily compare.
+    (is (= 4 (count (:asn1/elements
+                     (asn1/decode (:der (x509/extension san-cert :subject-alt-name)))))))
+    (is (= 2 (count (x509/dns-names san-cert))))
+    (is (not-any? #(str/includes? % "@") (x509/dns-names san-cert))))
+
+  (testing "the wildcard is returned as written; expanding it is not this library's job"
+    (is (some #(str/starts-with? % "*.") (x509/dns-names san-cert)))))
