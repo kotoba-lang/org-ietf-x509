@@ -77,7 +77,7 @@
 ;; of either check (ADR-2608261100).
 
 (ns x509.validity
-  (:export [normalised-instant? validity-problem issuer-problem]))
+  (:export [main normalised-instant? validity-problem issuer-problem]))
 
 ;; --- the normalised instant ------------------------------------------------------
 ;; `YYYY-MM-DDTHH:MM:SSZ`, twenty characters, the form `asn1/time-value`
@@ -166,3 +166,26 @@
     :issuer-may-not-sign-certificates
 
     :else :none))
+
+;; --- the artifact's own conformance check ------------------------------------------
+;;
+;; `main` is the browser profile's entry point -- `runtime/browser-host.mjs`
+;; refuses to instantiate a module without one -- and it is not a stub. It
+;; runs the two findings back through the decisions above and answers 0 only
+;; when each still decides the way this object was built to decide, so a
+;; COMPILED artifact can be asked whether it is itself by a host that knows
+;; nothing about X.509.
+;;
+;; Three, not ten: the native backends evaluate `main` as a compile-time
+;; oracle with a budget, and ten calls of this shape is `native artifact
+;; oracle evaluation rejected`. The wider check lives in the suite.
+
+(defn main [] :i64
+  (cond
+    (if (= (validity-problem "2026-07-30T13:12:33Z" "2036-07-27T13:12:33Z"
+                             "2036-07-27T10:00:00-05:00")
+           :instant-not-normalised) false true) 1
+    (if (= (validity-problem "2026-07-30T13:12:33Z" "2036-07-27T13:12:33Z"
+                             "2030-01-01T00:00:00Z") :none) false true) 2
+    (if (= (issuer-problem true false false false) :issuer-not-a-ca) false true) 3
+    :else 0))
