@@ -18,7 +18,7 @@
   (:require ["node:fs" :as fs]
             ["node:child_process" :as cp]
             ["node:path" :as path]
-            [clojure.string :as str]))
+            [kotoba.lang.text :as str]))
 
 (def cases
   [["normalised-instant?" "2030-01-01T00:00:00Z"]
