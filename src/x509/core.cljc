@@ -37,7 +37,7 @@
      a caller cannot read \"no opinion\" as \"allowed\"."
   (:require [asn1.core :as asn1]
             [asn1.oid :as oid]
-            [clojure.string :as str]))
+            [kotoba.lang.text :as str]))
 
 (def ^:private handled-extensions
   "Extensions this library understands well enough to honour when critical.
@@ -91,7 +91,7 @@
      :text (str/join ","
                      (for [rdn (reverse rdns) attr rdn]
                        (str (if-let [n (:name attr)]
-                              (str/upper-case
+                              (str/upper
                                (case n
                                  :common-name "cn" :country-name "c"
                                  :organization-name "o"
@@ -225,7 +225,7 @@
          (filter #(asn1/context-tag? % 2))
          ;; [2] IMPLICIT IA5String: the content octets are the name, and each
          ;; is one octet per character by definition of IA5.
-         (mapv #(str/lower-case (str/join (map char (asn1/->ints (:asn1/content %)))))))))
+         (mapv #(str/lower (str/join (map char (asn1/->ints (:asn1/content %)))))))))
 
 (defn other-names
   "`subjectAltName` `otherName` entries as `{oid → [inner-elements]}`.

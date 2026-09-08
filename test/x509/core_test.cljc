@@ -2,7 +2,7 @@
   "Held against two certificates OpenSSL produced — a self-signed P-256 root and
   a timestamping leaf it issued. Real DER rather than DER this library built, so
   a misreading cannot agree with a miswriting."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is testing]]
             [asn1.core :as asn1]
             [asn1.oid :as oid]
