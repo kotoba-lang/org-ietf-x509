@@ -64,8 +64,8 @@ bytes anyway.
 ## Test
 
 ```bash
-clojure -M:test    # against two certificates OpenSSL produced, not ones this built
-clojure -M:lint
+kbb -M:test    # against two certificates OpenSSL produced, not ones this built
+kbb -M:lint
 ```
 
 Apache-2.0.
