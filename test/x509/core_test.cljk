@@ -3,7 +3,7 @@
   a timestamping leaf it issued. Real DER rather than DER this library built, so
   a misreading cannot agree with a miswriting."
   (:require [kotoba.lang.text :as str]
-            [clojure.test :refer [deftest is testing]]
+            [kotoba.test :refer [deftest is testing]]
             [asn1.core :as asn1]
             [asn1.oid :as oid]
             [x509.core :as x509]))
